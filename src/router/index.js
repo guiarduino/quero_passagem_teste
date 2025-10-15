@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '@/pages/Home.vue'
-import Bus from '@/pages/Bus.vue'
+import Search from '@/pages/Search.vue'
 
 const routes = [
   {
@@ -11,7 +11,7 @@ const routes = [
   {
     path: '/onibus',
     name: 'Onibus',
-    component: Bus
+    component: Search
   }
 ]
 

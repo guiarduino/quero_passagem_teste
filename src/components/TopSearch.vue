@@ -7,6 +7,7 @@ import PopoverContent from '@/components/ui/popover/PopoverContent.vue';
 import PopoverTrigger from '@/components/ui/popover/PopoverTrigger.vue';
 import { cn } from '@/lib/utils';
 import { CalendarIcon, Search } from 'lucide-vue-next';
+import { CalendarDate } from '@internationalized/date';
 
 import {
   DateFormatter,
@@ -37,6 +38,11 @@ const showCalendar = ref(false)
 const partidaRef = ref(null)
 const destinoRef = ref(null)
 const selectedDate = ref<DateValue>()
+const today = new CalendarDate(
+  new Date().getFullYear(),
+  new Date().getMonth() + 1,
+  new Date().getDate()
+)
 
 // Filtra cidades conforme busca
 const filteredPartida = computed(() =>
@@ -102,12 +108,11 @@ watch(selectedDate, (newVal) => {
 </script>
 
 <template>
-  <div class="bg-gray-100 min-h-screen">
     <!-- Top menu search bar -->
-    <div class="search-bar fixed top-0 left-0 w-full z-50 bg-blue-900 p-4 flex justify-center items-center shadow-md">
+    <div class="search-bar content-wrapper top-0 left-0 w-full z-50 bg-blue-900 p-4 flex justify-center items-center shadow-md">
       <div class="flex items-center space-x-4 px-4">
         <!-- Partindo de -->
-        <div ref="partidaRef" class="bg-white text-black rounded-sm px-4 py-1 h-12 flex items-center">
+        <div ref="partidaRef" class="relative bg-white text-black rounded-sm px-4 py-1 h-12 flex items-center">
           <p class="text-xs text-gray-500 font-semibold mb-1">Partindo de</p>
           <input
             type="text"
@@ -118,7 +123,7 @@ watch(selectedDate, (newVal) => {
           />
           <ul
             v-if="showPartida && filteredPartida.length"
-            class="absolute left-0 right-0 mt-1 bg-white border rounded max-h-40 overflow-y-auto z-10"
+            class="absolute left-0 top-full mt-1 right-0 mt-1 bg-white border rounded max-h-40 overflow-y-auto z-10"
           >
             <li
               v-for="cidade in filteredPartida"
@@ -134,7 +139,7 @@ watch(selectedDate, (newVal) => {
           <span class="text-lg">&#8644;</span>
         </button>
         <!-- Indo para -->
-        <div ref="destinoRef" class="bg-white text-black rounded-sm px-4 py-1 h-12 flex items-center">
+        <div ref="destinoRef" class="relative bg-white text-black rounded-sm px-4 py-1 h-12 flex items-center">
           <p class="text-xs text-gray-500 font-semibold mb-1">Indo para</p>
           <input
             type="text"
@@ -145,7 +150,7 @@ watch(selectedDate, (newVal) => {
           />
           <ul
             v-if="showDestino && filteredDestino.length"
-            class="absolute left-0 right-0 mt-1 bg-white border rounded max-h-40 overflow-y-auto z-10"
+            class="absolute top-full left-0 right-0 mt-1 bg-white border rounded max-h-40 overflow-y-auto z-10"
           >
             <li
               v-for="cidade in filteredDestino"
@@ -158,7 +163,7 @@ watch(selectedDate, (newVal) => {
           </ul>
         </div>
         <!-- Data Saída -->
-        <div class="bg-white text-black rounded-sm px-4 py-1 h-12 flex items-center">
+        <div class="bg-white text-black rounded-sm px-4 py-1 h-12 w-60 flex items-center">
           <p class="text-xs text-gray-500 font-semibold mb-1">Data Saída</p>
           <Popover v-model:open="showCalendar">
             <PopoverTrigger as-child>
@@ -174,19 +179,14 @@ watch(selectedDate, (newVal) => {
               </Button>
             </PopoverTrigger>
             <PopoverContent class="w-auto p-0">
-              <Calendar v-model="selectedDate" locale="pt-BR" initial-focus />
+              <Calendar v-model="selectedDate" locale="pt-BR" initial-focus :minValue="today" />
             </PopoverContent>
           </Popover>
         </div>
-        <button class="bg-blue-500 text-white px-4 py-2 rounded-md cursor-pointer hover:bg-blue-700 h-12">
+        <button class="bg-blue-500 text-white px-4 py-2 w-25 flex items-center justify-center rounded-md cursor-pointer hover:bg-blue-700 h-12">
           <Search />
         </button>
       </div>
     </div>
 
-    <!-- Wrapper for centered content -->
-    <div class="content-wrapper mx-auto max-w-4xl mt-20">
-      <!-- Existing content here -->
-    </div>
-  </div>
 </template>
