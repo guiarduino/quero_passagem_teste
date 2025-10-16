@@ -213,7 +213,7 @@ defineExpose({
           <div class="flex flex-col sm:flex-row sm:items-center gap-4 lg:gap-6">
             <div class="flex flex-col items-start sm:items-end text-left sm:text-right">
               <p class="text-xs font-medium text-gray-600 uppercase tracking-wide">{{ card.seatClass }}</p>
-              <p class="text-3xl font-bold text-gray-900 mt-1">R$ {{ card.price.price.toFixed(2) }}</p>
+              <p class="text-3xl font-bold text-gray-900 mt-1">R$ {{ card.price.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}</p>
               <p class="text-xs text-gray-500">por pessoa</p>
             </div>
 
