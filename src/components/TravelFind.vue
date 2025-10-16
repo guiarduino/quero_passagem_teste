@@ -182,58 +182,64 @@ defineExpose({
       class="mt-5 border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer"
       @click="toggleExpand(card.id)"
     >
-      <CardContent class="flex flex-col sm:flex-row justify-between items-center gap-4 p-4">
-        <!-- Coluna esquerda: logo e horários -->
-        <div class="flex items-center gap-4 w-full sm:w-auto">
-          <img :src="card.company.logo.jpg" alt="Princesa" class="h-10 object-contain" />
-          <div class="flex flex-col">
-            <div class="flex items-center gap-2 text-lg font-semibold">
-              <span>{{ formatHourMinute(card.departure.time) }}</span>
-              <span class="text-gray-400">→</span>
-              <span>{{ formatHourMinute(card.arrival.time) }}</span>
-            </div>
+      <CardContent class="p-6">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <!-- Coluna esquerda: logo e horários -->
+          <div class="flex items-center gap-4 min-w-0 lg:w-64">
+            <img :src="card.company.logo.jpg" alt="Princesa" class="h-12 w-30 object-contain flex-shrink-0" />
+            <div class="flex flex-col min-w-0">
+              <div class="flex items-center gap-2 text-xl font-bold whitespace-nowrap">
+                <span>{{ formatHourMinute(card.departure.time) }}</span>
+                <span class="text-gray-400">→</span>
+                <span>{{ formatHourMinute(card.arrival.time) }}</span>
+              </div>
               <p class="text-sm text-gray-500">Duração: {{ formatDurationMinutes(card.travelDuration) }}</p>
+            </div>
           </div>
-        </div>
 
-        <!-- Coluna central: origem e destino -->
-        <div class="hidden sm:flex flex-col items-start text-sm text-gray-700">
-          <div class="flex items-center gap-1">
-            <MapPin class="w-4 h-4 text-gray-400" />
-            <span>De: {{ card.from.name }}</span>
+          <!-- Coluna central: origem e destino -->
+          <div class="flex flex-col gap-2 text-sm text-gray-700 lg:flex-1 lg:mx-6">
+            <div class="flex items-center gap-2">
+              <MapPin class="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <span class="truncate">De: {{ card.from.name }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <MapPin class="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <span class="truncate">Para: {{ card.to.name }}</span>
+            </div>
           </div>
-          <div class="flex items-center gap-1">
-            <MapPin class="w-4 h-4 text-gray-400" />
-            <span>Para: {{ card.to.name }}</span>
+
+          <!-- Coluna direita: tipo, preço e botão -->
+          <div class="flex flex-col sm:flex-row sm:items-center gap-4 lg:gap-6">
+            <div class="flex flex-col items-start sm:items-end text-left sm:text-right">
+              <p class="text-xs font-medium text-gray-600 uppercase tracking-wide">{{ card.seatClass }}</p>
+              <p class="text-3xl font-bold text-gray-900 mt-1">R$ {{ card.price.price.toFixed(2) }}</p>
+              <p class="text-xs text-gray-500">por pessoa</p>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <Button 
+                class="bg-green-700 hover:bg-green-800 text-white font-semibold px-8 py-6 text-sm whitespace-nowrap"
+                v-if="!isExpanded[card.id]"
+              >
+                ESCOLHER IDA
+              </Button>
+
+              <Button 
+                class="bg-white text-blue-800 border-2 border-blue-800 hover:bg-blue-50 font-semibold px-8 py-6 text-sm whitespace-nowrap"
+                v-if="isExpanded[card.id]"
+                @click.stop="isExpanded[card.id] = false"
+              >
+                FECHAR
+              </Button>
+
+              <!-- Ícone de expansão -->
+              <div class="flex-shrink-0">
+                <ChevronDown v-if="!isExpanded[card.id]" class="w-6 h-6 text-gray-400" />
+                <ChevronUp v-else class="w-6 h-6 text-gray-400" />
+              </div>
+            </div>
           </div>
-        </div>
-
-        <!-- Coluna direita: tipo e preço -->
-        <div class="flex flex-col items-end text-right">
-          <p class="text-sm font-medium text-gray-700">{{ card.seatClass }}</p>
-          <p class="text-2xl font-bold text-gray-900">R$ {{ card.price.price.toFixed(2) }}</p>
-          <p class="text-xs text-gray-500">por pessoa</p>
-        </div>
-
-        <Button 
-          class="bg-green-700 hover:bg-green-800 text-white font-semibold px-6"
-          v-if="!isExpanded[card.id]"
-        >
-          ESCOLHER IDA
-        </Button>
-
-        <Button 
-          class="bg-white text-blue-800 border border-blue-800 hover:bg-blue-800 hover:text-white font-semibold px-6"
-          v-if="isExpanded[card.id]"
-          @click.stop="isExpanded[card.id] = false"
-        >
-          FECHAR
-        </Button>
-
-        <!-- Ícone de expansão -->
-        <div class="sm:ml-2">
-          <ChevronDown v-if="!isExpanded[card.id]" class="w-5 h-5 text-gray-400" />
-          <ChevronUp v-else class="w-5 h-5 text-gray-400" />
         </div>
       </CardContent>
 
