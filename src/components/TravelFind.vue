@@ -1,216 +1,104 @@
 <script setup lang='ts'>
 import { onMounted, ref } from 'vue';
+import { Spinner } from '@/components/ui/spinner';
 import api from '@/services/api'
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapPin, ChevronDown, ChevronUp } from 'lucide-vue-next';
+import {useToast} from 'vue-toast-notification';
+import {
+  DateFormatter,
+  getLocalTimeZone,
+} from "@internationalized/date"
 
-const isExpanded = ref<Record<number, boolean>>({});
-const selectedSeats = ref([]);
+const toast = useToast();
 
-// Dados simulados para os cards (fallback caso a API não responda)
-let cardsData = [
-  {
-    id: 1,
-    departureTime: "08:00",
-    arrivalTime: "16:05",
-    duration: "8h 5m",
-    from: "Curitiba, PR - Rodoviária",
-    to: "Ourinhos, SP",
-    type: "LEITO CAMA",
-    price: 298.99,
-    rating: 4.8,
-    directBoarding: true,
-    busData: {
-      orientation: "horizontal",
-      floor: 0,
-      seatsLayout: "numbered",
-      seats: [
-        [
-          { seat: "03", position: { x: 0, y: 4, z: 0 }, occupied: true, type: "seat" },
-          { seat: null, position: { x: 1, y: 4, z: 0 }, type: "emptyOrReservedSpace" },
-          { seat: null, position: { x: 2, y: 4, z: 0 }, type: "emptyOrReservedSpace" },
-          { seat: "11", position: { x: 3, y: 4, z: 0 }, occupied: false, type: "seat" },
-          { seat: "15", position: { x: 4, y: 4, z: 0 }, occupied: false, type: "seat" },
-          { seat: "19", position: { x: 5, y: 4, z: 0 }, occupied: true, type: "seat" },
-          { seat: "23", position: { x: 6, y: 4, z: 0 }, occupied: true, type: "seat" },
-          { seat: "27", position: { x: 7, y: 4, z: 0 }, occupied: false, type: "seat" },
-          { seat: "31", position: { x: 8, y: 4, z: 0 }, occupied: false, type: "seat" },
-          { seat: "35", position: { x: 9, y: 4, z: 0 }, occupied: false, type: "seat" },
-          { seat: "40", position: { x: 10, y: 4, z: 0 }, occupied: false, type: "seat" },
-          { seat: "43", position: { x: 11, y: 4, z: 0 }, occupied: false, type: "seat" }
-        ],
-        [
-          { seat: "04", position: { x: 0, y: 3, z: 0 }, occupied: true, type: "seat" },
-          { seat: null, position: { x: 1, y: 3, z: 0 }, type: "emptyOrReservedSpace" },
-          { seat: null, position: { x: 2, y: 3, z: 0 }, type: "emptyOrReservedSpace" },
-          { seat: "12", position: { x: 3, y: 3, z: 0 }, occupied: false, type: "seat" },
-          { seat: "16", position: { x: 4, y: 3, z: 0 }, occupied: false, type: "seat" },
-          { seat: "20", position: { x: 5, y: 3, z: 0 }, occupied: false, type: "seat" },
-          { seat: "24", position: { x: 6, y: 3, z: 0 }, occupied: false, type: "seat" },
-          { seat: "28", position: { x: 7, y: 3, z: 0 }, occupied: false, type: "seat" },
-          { seat: "32", position: { x: 8, y: 3, z: 0 }, occupied: false, type: "seat" },
-          { seat: "36", position: { x: 9, y: 3, z: 0 }, occupied: false, type: "seat" },
-          { seat: "39", position: { x: 10, y: 3, z: 0 }, occupied: false, type: "seat" },
-          { seat: "44", position: { x: 11, y: 3, z: 0 }, occupied: false, type: "seat" }
-        ],
-        [
-          { seat: null, position: { x: 0, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-          { seat: null, position: { x: 1, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-          { seat: null, position: { x: 2, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-          { seat: null, position: { x: 3, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-          { seat: null, position: { x: 4, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-          { seat: null, position: { x: 5, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-          { seat: null, position: { x: 6, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-          { seat: null, position: { x: 7, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-          { seat: null, position: { x: 8, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-          { seat: null, position: { x: 9, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-          { seat: null, position: { x: 10, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-          { seat: null, position: { x: 11, y: 2, z: 0 }, type: "emptyOrReservedSpace" }
-        ],
-        [
-          { seat: "02", position: { x: 0, y: 1, z: 0 }, occupied: false, type: "seat" },
-          { seat: "06", position: { x: 1, y: 1, z: 0 }, occupied: false, type: "seat" },
-          { seat: "08", position: { x: 2, y: 1, z: 0 }, occupied: false, type: "seat" },
-          { seat: "10", position: { x: 3, y: 1, z: 0 }, occupied: false, type: "seat" },
-          { seat: "14", position: { x: 4, y: 1, z: 0 }, occupied: false, type: "seat" },
-          { seat: "18", position: { x: 5, y: 1, z: 0 }, occupied: false, type: "seat" },
-          { seat: "22", position: { x: 6, y: 1, z: 0 }, occupied: false, type: "seat" },
-          { seat: "26", position: { x: 7, y: 1, z: 0 }, occupied: false, type: "seat" },
-          { seat: "30", position: { x: 8, y: 1, z: 0 }, occupied: false, type: "seat" },
-          { seat: "34", position: { x: 9, y: 1, z: 0 }, occupied: false, type: "seat" },
-          { seat: "38", position: { x: 10, y: 1, z: 0 }, occupied: false, type: "seat" },
-          { seat: "42", position: { x: 11, y: 1, z: 0 }, occupied: false, type: "seat" }
-        ],
-        [
-          { seat: "01", position: { x: 0, y: 0, z: 0 }, occupied: true, type: "seat" },
-          { seat: "05", position: { x: 1, y: 0, z: 0 }, occupied: false, type: "seat" },
-          { seat: "07", position: { x: 2, y: 0, z: 0 }, occupied: false, type: "seat" },
-          { seat: "09", position: { x: 3, y: 0, z: 0 }, occupied: false, type: "seat" },
-          { seat: "13", position: { x: 4, y: 0, z: 0 }, occupied: false, type: "seat" },
-          { seat: "17", position: { x: 5, y: 0, z: 0 }, occupied: false, type: "seat" },
-          { seat: "21", position: { x: 6, y: 0, z: 0 }, occupied: false, type: "seat" },
-          { seat: "25", position: { x: 7, y: 0, z: 0 }, occupied: false, type: "seat" },
-          { seat: "29", position: { x: 8, y: 0, z: 0 }, occupied: false, type: "seat" },
-          { seat: "33", position: { x: 9, y: 0, z: 0 }, occupied: false, type: "seat" },
-          { seat: "37", position: { x: 10, y: 0, z: 0 }, occupied: false, type: "seat" },
-          { seat: "41", position: { x: 11, y: 0, z: 0 }, occupied: false, type: "seat" }
-        ]
-      ]
-    }
+type TravelData = {
+  id: string,
+  arrival: {
+    date: string,
+    time: string
   },
-  {
-    id: 2,
-    departureTime: "10:00",
-    arrivalTime: "18:05",
-    duration: "8h 5m",
-    image: "https://via.placeholder.com/100x40?text=Princesa",
-    from: "São Paulo, SP - Rodoviária",
-    to: "Rio de Janeiro, RJ",
-    type: "EXECUTIVO",
-    price: 199.99,
-    rating: 4.5,
-    directBoarding: false,
-    busData: {
-      orientation: "horizontal",
-      floor: 0,
-      seatsLayout: "numbered",
-      seats: [
-    [
-      { seat: "4", position: { x: 1, y: 4, z: 0 }, occupied: true, type: "seat" },
-      { seat: "8", position: { x: 2, y: 4, z: 0 }, occupied: true, type: "seat" },
-      { seat: "12", position: { x: 3, y: 4, z: 0 }, occupied: true, type: "seat" },
-      { seat: "16", position: { x: 4, y: 4, z: 0 }, occupied: true, type: "seat" },
-      { seat: "20", position: { x: 5, y: 4, z: 0 }, occupied: false, type: "seat" },
-      { seat: "24", position: { x: 6, y: 4, z: 0 }, occupied: true, type: "seat" },
-      { seat: "28", position: { x: 7, y: 4, z: 0 }, occupied: true, type: "seat" },
-      { seat: "32", position: { x: 8, y: 4, z: 0 }, occupied: true, type: "seat" },
-      { seat: "36", position: { x: 9, y: 4, z: 0 }, occupied: true, type: "seat" },
-      { seat: "40", position: { x: 10, y: 4, z: 0 }, occupied: true, type: "seat" },
-      { seat: "44", position: { x: 11, y: 4, z: 0 }, occupied: true, type: "seat" },
-      { seat: "48", position: { x: 12, y: 4, z: 0 }, occupied: true, type: "seat" },
-      { seat: "52", position: { x: 13, y: 4, z: 0 }, occupied: true, type: "seat" },
-      { seat: "56", position: { x: 14, y: 4, z: 0 }, occupied: true, type: "seat" },
-      { seat: "60", position: { x: 15, y: 4, z: 0 }, occupied: true, type: "seat" }
-    ],
-    [
-      { seat: "3", position: { x: 1, y: 3, z: 0 }, occupied: true, type: "seat" },
-      { seat: "7", position: { x: 2, y: 3, z: 0 }, occupied: true, type: "seat" },
-      { seat: "11", position: { x: 3, y: 3, z: 0 }, occupied: true, type: "seat" },
-      { seat: "15", position: { x: 4, y: 3, z: 0 }, occupied: true, type: "seat" },
-      { seat: "19", position: { x: 5, y: 3, z: 0 }, occupied: true, type: "seat" },
-      { seat: "23", position: { x: 6, y: 3, z: 0 }, occupied: true, type: "seat" },
-      { seat: "27", position: { x: 7, y: 3, z: 0 }, occupied: true, type: "seat" },
-      { seat: "31", position: { x: 8, y: 3, z: 0 }, occupied: true, type: "seat" },
-      { seat: "35", position: { x: 9, y: 3, z: 0 }, occupied: true, type: "seat" },
-      { seat: "39", position: { x: 10, y: 3, z: 0 }, occupied: true, type: "seat" },
-      { seat: "43", position: { x: 11, y: 3, z: 0 }, occupied: true, type: "seat" },
-      { seat: "47", position: { x: 12, y: 3, z: 0 }, occupied: true, type: "seat" },
-      { seat: "51", position: { x: 13, y: 3, z: 0 }, occupied: true, type: "seat" },
-      { seat: "55", position: { x: 14, y: 3, z: 0 }, occupied: true, type: "seat" },
-      { seat: "59", position: { x: 15, y: 3, z: 0 }, occupied: true, type: "seat" }
-    ],
-    [
-      { seat: null, position: { x: 1, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-      { seat: null, position: { x: 2, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-      { seat: null, position: { x: 3, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-      { seat: null, position: { x: 4, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-      { seat: null, position: { x: 5, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-      { seat: null, position: { x: 6, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-      { seat: null, position: { x: 7, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-      { seat: null, position: { x: 8, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-      { seat: null, position: { x: 9, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-      { seat: null, position: { x: 10, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-      { seat: null, position: { x: 11, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-      { seat: null, position: { x: 12, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-      { seat: null, position: { x: 13, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-      { seat: null, position: { x: 14, y: 2, z: 0 }, type: "emptyOrReservedSpace" },
-      { seat: null, position: { x: 15, y: 2, z: 0 }, type: "emptyOrReservedSpace" }
-    ],
-    [
-      { seat: "2", position: { x: 1, y: 1, z: 0 }, occupied: true, type: "seat" },
-      { seat: "6", position: { x: 2, y: 1, z: 0 }, occupied: true, type: "seat" },
-      { seat: "10", position: { x: 3, y: 1, z: 0 }, occupied: false, type: "seat" },
-      { seat: "14", position: { x: 4, y: 1, z: 0 }, occupied: true, type: "seat" },
-      { seat: "18", position: { x: 5, y: 1, z: 0 }, occupied: true, type: "seat" },
-      { seat: "22", position: { x: 6, y: 1, z: 0 }, occupied: true, type: "seat" },
-      { seat: "26", position: { x: 7, y: 1, z: 0 }, occupied: true, type: "seat" },
-      { seat: "30", position: { x: 8, y: 1, z: 0 }, occupied: false, type: "seat" },
-      { seat: "34", position: { x: 9, y: 1, z: 0 }, occupied: true, type: "seat" },
-      { seat: "38", position: { x: 10, y: 1, z: 0 }, occupied: true, type: "seat" },
-      { seat: "42", position: { x: 11, y: 1, z: 0 }, occupied: true, type: "seat" },
-      { seat: "46", position: { x: 12, y: 1, z: 0 }, occupied: true, type: "seat" },
-      { seat: "50", position: { x: 13, y: 1, z: 0 }, occupied: true, type: "seat" },
-      { seat: "54", position: { x: 14, y: 1, z: 0 }, occupied: true, type: "seat" },
-      { seat: "58", position: { x: 15, y: 1, z: 0 }, occupied: true, type: "seat" }
-    ],
-    [
-      { seat: "1", position: { x: 1, y: 0, z: 0 }, occupied: true, type: "seat" },
-      { seat: "5", position: { x: 2, y: 0, z: 0 }, occupied: true, type: "seat" },
-      { seat: "9", position: { x: 3, y: 0, z: 0 }, occupied: true, type: "seat" },
-      { seat: "13", position: { x: 4, y: 0, z: 0 }, occupied: true, type: "seat" },
-      { seat: "17", position: { x: 5, y: 0, z: 0 }, occupied: true, type: "seat" },
-      { seat: "21", position: { x: 6, y: 0, z: 0 }, occupied: true, type: "seat" },
-      { seat: "25", position: { x: 7, y: 0, z: 0 }, occupied: true, type: "seat" },
-      { seat: "29", position: { x: 8, y: 0, z: 0 }, occupied: true, type: "seat" },
-      { seat: "33", position: { x: 9, y: 0, z: 0 }, occupied: true, type: "seat" },
-      { seat: "37", position: { x: 10, y: 0, z: 0 }, occupied: true, type: "seat" },
-      { seat: "41", position: { x: 11, y: 0, z: 0 }, occupied: true, type: "seat" },
-      { seat: "45", position: { x: 12, y: 0, z: 0 }, occupied: true, type: "seat" },
-      { seat: "49", position: { x: 13, y: 0, z: 0 }, occupied: true, type: "seat" },
-      { seat: "53", position: { x: 14, y: 0, z: 0 }, occupied: true, type: "seat" },
-      { seat: "57", position: { x: 15, y: 0, z: 0 }, occupied: true, type: "seat" }
-    ]
-  ]
-    }
-  }
-];
+  departure: {
+    date: string,
+    time: string
+  },
+  seatClass: string,
+  to: {
+    id: string,
+    name: string
+  },
+  from: {
+    id: string,
+    name: string
+  },
+  price: {
+    seatPrice: number,
+    taxPrice: number,
+    price: number
+  },
+  company: {
+    id: number,
+    name: string,
+    logo: {
+      svg: string,
+      jpg: string
+    },
+    phone: string,
+    cnpj: string,
+    description: any
+  },
+  travelDuration: number
+  busData: {
+    orientation: string,
+    floor: number,
+    seatsLayout: string,
+    seats: {
+      seat?: string,
+      position: {
+        x: number,
+        y: number,
+        z: number,
+      };
+      occupied?: boolean,
+      type: string,
+    }[][]
+  }[]
+}
 
-const toggleExpand = (cardId: number) => {
+const isExpanded = ref<Record<string, boolean>>({});
+const selectedSeats = ref([]);
+const cardsData = ref<TravelData[]>([]);
+const isLoading = ref(false);
+
+const df = new DateFormatter("EN-us", {
+  dateStyle: "short",
+})
+
+const toggleExpand = (cardId: string) => {
   if(isExpanded.value[cardId] !== true){
     isExpanded.value[cardId] = true;
   }
 };
+
+function formatHourMinute(time: string): string {
+  if (!time) return '';
+  const parts = time.split(':');
+  return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : time;
+}
+
+function formatDurationMinutes(seconds: number): string {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    
+    if (hours > 0 && minutes > 0) {
+      return `${hours}h ${minutes}min`;
+    } else if (hours > 0) {
+      return `${hours}h`;
+    } else {
+      return `${minutes}min`;
+    }
+}
 
 const handleSeatClick = (seatNumber: string) => {
   const index = selectedSeats.value.indexOf(seatNumber)
@@ -240,13 +128,37 @@ const getSeatClass = (seatData: any) => {
 
 onMounted(async () => {
   // Inicializar estados padrão
-  cardsData.forEach(card => {
+  cardsData.value.forEach(card => {
     isExpanded.value[card.id] = false;
   });
 });
 
-function findTravels() {
-  console.log("Busca as viagens agora aew então se vc é bom memo");
+async function findTravels(data: { selectedPlace: string; selectedDestination: string; selectedDate: any }) {
+  
+  try {
+    isLoading.value = true;
+    let dateObj = data.selectedDate.toDate(getLocalTimeZone());
+    let travelDate = `${dateObj.getFullYear()}-${String(dateObj.getMonth()+1).padStart(2,'0')}-${String(dateObj.getDate()).padStart(2,'0')}`;
+    let payload = {
+      to: data.selectedDestination,
+      from: data.selectedPlace,
+      travelDate
+    }
+    await api.trips.findTrips(payload).then(res => {
+      // Ordena por departure.date, departure.time e travelDuration crescente
+      cardsData.value = res.sort((a: TravelData, b: TravelData) => {
+        const dateA = `${a.departure.date} ${a.departure.time}`;
+        const dateB = `${b.departure.date} ${b.departure.time}`;
+        const diff = new Date(dateA).getTime() - new Date(dateB).getTime();
+        if (diff !== 0) return diff;
+        return a.travelDuration - b.travelDuration;
+      });
+    });
+  } catch (err) {
+    toast.warning('Falha ao buscar trips da API, usando dados locais de fallback', err)
+  } finally {
+    isLoading.value = false;
+  }
 }
 
 defineExpose({
@@ -259,7 +171,13 @@ defineExpose({
   <h1 class="text-2xl font-bold mb-4">Resultados da Busca</h1>
   <p class="text-gray-600">{{ cardsData.length }} passagens encontradas</p>
 
-  <div v-for="card in cardsData" :key="card.id">
+  <div v-if="isLoading" class="flex justify-center items-center py-10">
+    <Spinner class="size-8" />
+    <p class="ml-4 text-gray-600">Carregando...</p>
+  </div>
+
+  <div v-else>
+    <div v-for="card in cardsData" :key="card.id">
     <Card 
       class="mt-5 border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer"
       @click="toggleExpand(card.id)"
@@ -267,14 +185,14 @@ defineExpose({
       <CardContent class="flex flex-col sm:flex-row justify-between items-center gap-4 p-4">
         <!-- Coluna esquerda: logo e horários -->
         <div class="flex items-center gap-4 w-full sm:w-auto">
-          <img :src="card.image" alt="Princesa" class="h-10 object-contain" />
+          <img :src="card.company.logo.jpg" alt="Princesa" class="h-10 object-contain" />
           <div class="flex flex-col">
             <div class="flex items-center gap-2 text-lg font-semibold">
-              <span>{{ card.departureTime }}</span>
+              <span>{{ formatHourMinute(card.departure.time) }}</span>
               <span class="text-gray-400">→</span>
-              <span>{{ card.arrivalTime }}</span>
+              <span>{{ formatHourMinute(card.arrival.time) }}</span>
             </div>
-            <p class="text-sm text-gray-500">Duração: {{ card.duration }}</p>
+              <p class="text-sm text-gray-500">Duração: {{ formatDurationMinutes(card.travelDuration) }}</p>
           </div>
         </div>
 
@@ -282,18 +200,18 @@ defineExpose({
         <div class="hidden sm:flex flex-col items-start text-sm text-gray-700">
           <div class="flex items-center gap-1">
             <MapPin class="w-4 h-4 text-gray-400" />
-            <span>De: {{ card.from }}</span>
+            <span>De: {{ card.from.name }}</span>
           </div>
           <div class="flex items-center gap-1">
             <MapPin class="w-4 h-4 text-gray-400" />
-            <span>Para: {{ card.to }}</span>
+            <span>Para: {{ card.to.name }}</span>
           </div>
         </div>
 
         <!-- Coluna direita: tipo e preço -->
         <div class="flex flex-col items-end text-right">
-          <p class="text-sm font-medium text-gray-700">{{ card.type }}</p>
-          <p class="text-2xl font-bold text-gray-900">R$ {{ card.price.toFixed(2) }}</p>
+          <p class="text-sm font-medium text-gray-700">{{ card.seatClass }}</p>
+          <p class="text-2xl font-bold text-gray-900">R$ {{ card.price.price.toFixed(2) }}</p>
           <p class="text-xs text-gray-500">por pessoa</p>
         </div>
 
@@ -347,31 +265,36 @@ defineExpose({
 
               <!-- Área dos assentos -->
               <div class="flex-1">
-                <div
-                  v-for="(row, rowIndex) in card.busData.seats"
-                  :key="rowIndex"
-                  class="flex gap-2 mb-2"
-                >
-                  <template v-for="(seatData, seatIndex) in row" :key="seatIndex">
-                    <!-- Espaço vazio -->
-                    <div v-if="seatData.type === 'emptyOrReservedSpace'" class="w-12 h-12"></div>
-                    
-                    <!-- Assento -->
-                    <button
-                      v-else
-                      :class="getSeatClass(seatData)"
-                      @click.stop="seatData && 'occupied' in seatData && !seatData.occupied && handleSeatClick(seatData.seat)"
-                      :disabled="seatData && 'occupied' in seatData && seatData.occupied"
-                    >
-                      {{ seatData.seat }}
-                    </button>
-                  </template>
-                </div>
+                <template v-if="card.busData && card.busData.length > 0 && card.busData[0].seats">
+                  <div
+                    v-for="(row, rowIndex) in card.busData[0].seats"
+                    :key="rowIndex"
+                    class="flex gap-2 mb-2"
+                  >
+                    <template v-for="(seatData, seatIndex) in row" :key="seatIndex">
+                      <!-- Espaço vazio -->
+                      <div v-if="seatData.type === 'emptyOrReservedSpace'" class="w-12 h-12"></div>
+                      <!-- Assento -->
+                      <button
+                        v-else
+                        :class="getSeatClass(seatData)"
+                        @click.stop="seatData && 'occupied' in seatData && !seatData.occupied && handleSeatClick(seatData.seat)"
+                        :disabled="seatData && 'occupied' in seatData && seatData.occupied"
+                      >
+                        {{ seatData.seat }}
+                      </button>
+                    </template>
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="text-gray-500">Não há dados de assentos disponíveis.</div>
+                </template>
               </div>
             </div>
           </div>
         </div>
       </div>
     </Card>
+    </div>
   </div>
 </template>

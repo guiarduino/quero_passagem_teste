@@ -9,6 +9,7 @@ import PopoverTrigger from '@/components/ui/popover/PopoverTrigger.vue';
 import { cn } from '@/lib/utils';
 import { CalendarIcon, Search } from 'lucide-vue-next';
 import { CalendarDate } from '@internationalized/date';
+import {useToast} from 'vue-toast-notification';
 
 import {
   DateFormatter,
@@ -27,6 +28,7 @@ type Cities = {
   url: String
 }
 
+const toast = useToast();
 const cities = ref<Cities[]>([]);
 const selectedPlace = ref(null)
 const selectedDestination = ref(null)
@@ -97,22 +99,22 @@ onMounted(async() => {
       cities.value = res
     });
   } catch (err) {
-    console.warn('Falha ao buscar trips da API, usando dados locais de fallback', err)
+    toast.warning('Falha ao buscar trips da API, usando dados locais de fallback', err)
   }
 })
 
 function handleFind() {
   if (!selectedPlace.value || !selectedDestination.value) {
-    alert('Por favor, selecione as cidades de partida e destino.')
+    toast.warning('Por favor, selecione as cidades de partida e destino.')
     return
   }
   if (selectedPlace.value === selectedDestination.value) {
-    alert('As cidades de partida e destino não podem ser iguais.')
+    toast.warning('As cidades de partida e destino não podem ser iguais.')
     return
   }
-
+ 
   if (!selectedDate.value) {
-    alert('Por favor, selecione uma data de saída.')
+    toast.warning('Por favor, selecione uma data de saída.');
     return
   }
 
@@ -120,11 +122,15 @@ function handleFind() {
   const partidaOk = /\b(PR|SP)\b/i.test(String(searchPlace.value))
   const destinoOk = /\b(PR|SP)\b/i.test(String(searchDestination.value))
   if (!partidaOk || !destinoOk) {
-    alert('Só é possível buscar viagens para cidades dos estados do PR ou SP')
+    toast.warning('Só é possível buscar viagens para cidades dos estados do PR ou SP');
     return
   }
 
-  emit('buscar')
+  emit('buscar', {
+    selectedPlace: selectedPlace.value,
+    selectedDestination: selectedDestination.value,
+    selectedDate: selectedDate.value
+  })
   
 }
 
@@ -166,9 +172,9 @@ watch(selectedDate, (newVal) => {
             </li>
           </ul>
         </div>
-        <button class="bg-white border-none rounded-full w-10 h-10 flex items-center justify-center cursor-pointer">
+        <!-- <button class="bg-white border-none rounded-full w-10 h-10 flex items-center justify-center cursor-pointer">
           <span class="text-lg">&#8644;</span>
-        </button>
+        </button> -->
         <!-- Indo para -->
         <div ref="destinoRef" class="relative bg-white text-black rounded-sm px-4 py-1 h-12 flex items-center">
           <p class="text-xs text-gray-500 font-semibold mb-1">Indo para</p>
