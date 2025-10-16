@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch, defineEmits } from 'vue';
+import api from '@/services/api'
 import Button from '@/components/ui/button/Button.vue';
 import Calendar from '@/components/ui/calendar/Calendar.vue';
 import Popover from '@/components/ui/popover/Popover.vue';
@@ -19,19 +20,20 @@ const df = new DateFormatter("PT-br", {
   dateStyle: "short",
 })
 
-const cidades = [
-  { label: 'Ourinhos', value: 'ourinhos' },
-  { label: 'Curitiba', value: 'curitiba' },
-  { label: 'São Paulo', value: 'sp' },
-  { label: 'Rio de Janeiro', value: 'rj' },
-]
+type Cities = {
+  id: number,
+  name: String,
+  type: String,
+  url: String
+}
 
-const selectedPartida = ref(null)
-const selectedDestino = ref(null)
-const searchPartida = ref('')
-const searchDestino = ref('')
-const showPartida = ref(false)
-const showDestino = ref(false)
+const cities = ref<Cities[]>([]);
+const selectedPlace = ref(null)
+const selectedDestination = ref(null)
+const searchPlace = ref('')
+const searchDestination = ref('')
+const showPlace = ref(false)
+const showDestination = ref(false)
 const showCalendar = ref(false)
 
 // Referências para os inputs
@@ -44,58 +46,87 @@ const today = new CalendarDate(
   new Date().getDate()
 )
 
+const emit = defineEmits(['buscar'])
+
+function normalize(str: string) {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
 // Filtra cidades conforme busca
 const filteredPartida = computed(() =>
-  cidades.filter(c =>
-    c.label.toLowerCase().includes(searchPartida.value.toLowerCase())
+  cities.value.filter(c =>
+    normalize(String(c.name)).includes(normalize(searchPlace.value))
   )
 )
 const filteredDestino = computed(() =>
-  cidades.filter(c =>
-    c.label.toLowerCase().includes(searchDestino.value.toLowerCase())
+  cities.value.filter(c =>
+    normalize(String(c.name)).includes(normalize(searchDestination.value))
   )
 )
 
 function selectPartida(cidade) {
-  selectedPartida.value = cidade.value
-  searchPartida.value = cidade.label
-  showPartida.value = false
+  selectedPlace.value = cidade.id
+  searchPlace.value = cidade.name
+  showPlace.value = false
 }
 
 function selectDestino(cidade) {
-  selectedDestino.value = cidade.value
-  searchDestino.value = cidade.label
-  showDestino.value = false
+  selectedDestination.value = cidade.id
+  searchDestination.value = cidade.name
+  showDestination.value = false
 }
 
 function handleClickOutside(e) {
   if (
     partidaRef.value && !partidaRef.value.contains(e.target)
   ) {
-    showPartida.value = false
+    showPlace.value = false
   }
   if (
     destinoRef.value && !destinoRef.value.contains(e.target)
   ) {
-    showDestino.value = false
+    showDestination.value = false
   }
 }
 
+onMounted(async() => {
+  document.addEventListener('click', handleClickOutside)
+
+  try {
+    await api.trips.getTrips().then(res => {
+      cities.value = res
+    });
+  } catch (err) {
+    console.warn('Falha ao buscar trips da API, usando dados locais de fallback', err)
+  }
+})
+
 function handleFind() {
-  if (!selectedPartida.value || !selectedDestino.value) {
+  if (!selectedPlace.value || !selectedDestination.value) {
     alert('Por favor, selecione as cidades de partida e destino.')
     return
   }
-  if (selectedPartida.value === selectedDestino.value) {
+  if (selectedPlace.value === selectedDestination.value) {
     alert('As cidades de partida e destino não podem ser iguais.')
     return
   }
-  alert(`Buscando passagem de ${searchPartida.value} para ${searchDestino.value} na data ${selectedDate.value}`)
-}
 
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
+  if (!selectedDate.value) {
+    alert('Por favor, selecione uma data de saída.')
+    return
+  }
+
+  // Só permitir busca se o nome da cidade de partida ou destino contiver "PR" ou "SP"
+  const partidaOk = /\b(PR|SP)\b/i.test(String(searchPlace.value))
+  const destinoOk = /\b(PR|SP)\b/i.test(String(searchDestination.value))
+  if (!partidaOk || !destinoOk) {
+    alert('Só é possível buscar viagens para cidades dos estados do PR ou SP')
+    return
+  }
+
+  emit('buscar')
+  
+}
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
@@ -116,22 +147,22 @@ watch(selectedDate, (newVal) => {
           <p class="text-xs text-gray-500 font-semibold mb-1">Partindo de</p>
           <input
             type="text"
-            v-model="searchPartida"
-            placeholder="Curitiba, PR - Rodoviária"
+            v-model="searchPlace"
+            placeholder="Digite a cidade"
             class="w-full px-3 py-2 border rounded-md border-0 outline-none h-full"
-            @focus="showPartida = true"
+            @focus="showPlace = true"
           />
           <ul
-            v-if="showPartida && filteredPartida.length"
+            v-if="showPlace && filteredPartida.length"
             class="absolute left-0 top-full mt-1 right-0 mt-1 bg-white border rounded max-h-40 overflow-y-auto z-10"
           >
             <li
               v-for="cidade in filteredPartida"
-              :key="cidade.value"
+              :key="cidade.id"
               @click="selectPartida(cidade)"
               class="px-3 py-2 hover:bg-blue-100 cursor-pointer"
             >
-              {{ cidade.label }}
+              {{ cidade.name }}
             </li>
           </ul>
         </div>
@@ -143,22 +174,22 @@ watch(selectedDate, (newVal) => {
           <p class="text-xs text-gray-500 font-semibold mb-1">Indo para</p>
           <input
             type="text"
-            v-model="searchDestino"
-            placeholder="Ourinhos, SP"
+            v-model="searchDestination"
+            placeholder="Digite a cidade"
             class="w-full px-3 py-2 border rounded-md border-0   outline-none h-full"
-            @focus="showDestino = true"
+            @focus="showDestination = true"
           />
           <ul
-            v-if="showDestino && filteredDestino.length"
+            v-if="showDestination && filteredDestino.length"
             class="absolute top-full left-0 right-0 mt-1 bg-white border rounded max-h-40 overflow-y-auto z-10"
           >
             <li
               v-for="cidade in filteredDestino"
-              :key="cidade.value"
+              :key="cidade.id"
               @click="selectDestino(cidade)"
               class="px-3 py-2 hover:bg-blue-100 cursor-pointer"
             >
-              {{ cidade.label }}
+              {{ cidade.name }}
             </li>
           </ul>
         </div>
@@ -183,9 +214,10 @@ watch(selectedDate, (newVal) => {
             </PopoverContent>
           </Popover>
         </div>
-        <button class="bg-blue-500 text-white px-4 py-2 w-25 flex items-center justify-center rounded-md cursor-pointer hover:bg-blue-700 h-12">
+        <Button class="bg-blue-500 text-white px-4 py-2 w-25 flex items-center justify-center rounded-md cursor-pointer hover:bg-blue-700 h-12"
+            @click="handleFind()">
           <Search />
-        </button>
+        </Button>
       </div>
     </div>
 

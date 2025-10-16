@@ -21,5 +21,14 @@ export default defineConfig({
     host: 'localhost',
     port: 3000,
     open: true,
+    proxy: {
+      // proxy requests starting with /api to the local Docker API
+      '/api': {
+        target: import.meta.env?.API_EXTENSION || 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
+    }
   }
 })
